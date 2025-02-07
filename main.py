@@ -1,22 +1,27 @@
 from flask import Flask, request, jsonify
 import re
 import string
+from database import db,URLMapping
 
 app = Flask(__name__)
 
+#database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///urls.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-url_database = {}
+db.init_app(app)
 
-# 使用全局计数器生成唯一数字
-counter = 1
+with app.app_context():
+    db.create_all()
+
 
 def validation(url):
-
     regex = r'^(https?://)' \
             r'(([A-Za-z0-9-]+\.)+[A-Za-z]{2,})' \
             r'(:\d+)?' \
             r'(/\S*)?$'
     return re.match(regex, url) is not None
+
 
 F = 100000
 def encode(num):
@@ -28,17 +33,17 @@ def encode(num):
     while num:
         result.append(char[num % base])
         num //= base
-
     return ''.join(reversed(result))
 
 @app.route('/', methods=['GET', 'POST', 'DELETE'])
 def root():
-    global counter
+
     if request.method == 'GET':
-        return jsonify(url_database), 200
+        mappings = URLMapping.query.all()
+        result = {mapping.shortid: mapping.long_url for mapping in mappings}
+        return jsonify(result), 200
 
     elif request.method == 'POST':
-        # 创建新的 URL 映射
         data = request.get_json()
         if not data or 'value' not in data:
             return jsonify({'error': 'Missing URL'}), 400
@@ -47,26 +52,32 @@ def root():
         if not validation(long_url):
             return jsonify({'error': 'Invalid URL format'}), 400
 
-        # 使用全局 counter 生成短 id，并进行 Base62 编码
-        short_id = encode(counter)
-        counter += 1
+        new_mapping = URLMapping(long_url=long_url, shortid='')
+        db.session.add(new_mapping)
+        db.session.commit()
 
-        url_database[short_id] = long_url
+        short_id = encode(new_mapping.id)
+        new_mapping.shortid = short_id
+        db.session.commit()
         return jsonify({'id': short_id}), 201
+
 
     elif request.method == 'DELETE':
 
-        url_database.clear()
-        return jsonify({'error': 'Invalid operation'}), 404
+        db.session.query(URLMapping).delete()
+        db.session.commit()
+    return jsonify({'error': 'Invalid operation'}), 404
 
 @app.route('/<short_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_short_id(short_id):
+    mapping = URLMapping.query.filter_by(shortid= short_id).first()
+
     if request.method == 'GET':
+        if mapping:
+            mapping.visit_count +=1
+            db.session.commit()
 
-        if short_id in url_database:
-            long_url = url_database[short_id]
-
-            response = jsonify({'value': long_url})
+            response = jsonify({'value': mapping.long_url})
             response.status_code =301
             return response
 
@@ -75,7 +86,7 @@ def handle_short_id(short_id):
             return jsonify({'error': 'Short URL not found'}), 404
 
     elif request.method == 'PUT':
-        if short_id not in url_database:
+        if not mapping:
             return jsonify({'error': 'Short URL not found'}), 404
 
         data = request.get_json(force=True)
@@ -87,14 +98,16 @@ def handle_short_id(short_id):
             return jsonify({'error': 'Invalid URL format'}), 400
 
 
-        url_database[short_id] = new_url
+        mapping.long_url = new_url
+        db.session.commit()
         return jsonify({'message': 'Updated successfully'}), 200
 
 
     elif request.method == 'DELETE':
 
-        if short_id in url_database:
-            del url_database[short_id]
+        if mapping:
+            db.session.delete(mapping)
+            db.session.commit()
             return '', 204
         else:
             return jsonify({'error': 'Short URL not found'}), 404
