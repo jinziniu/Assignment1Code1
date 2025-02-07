@@ -7,18 +7,28 @@ This project is a RESTful URL shortening service implemented using the Flask fra
 - Basic API Operations: Supports creating, retrieving, updating, and deleting short URLs.
 
 ## Installation & setup
-1. Install
-
-2. Installation of dependencies
+1. Installation of dependencies
 ``` bash
  pip install flask
  ```
 
-4. run the service
+2. run the service
 ```bash
 python main.py
 ```
 The server runs on `http://127.0.0.1:8000`.
+
+## API Endpoints
+
+| **Path & Method**  | **Parameters**                          | **Return Value (HTTP Code, Response)** |
+|--------------------|----------------------------------|--------------------------------|
+| `/:id` **GET**     | `:id` - Unique identifier of a URL | `301, Redirect to original URL` <br> `404, "Short URL not found"` |
+| `/:id` **PUT**     | `:id` - Unique identifier of a URL | `200, "Updated successfully"` <br> `400, "Invalid URL format"` <br> `404, "Short URL not found"` |
+| `/:id` **DELETE**  | `:id` - Unique identifier of a URL | `204, No Content` <br> `404, "Short URL not found"` |
+| `/` **GET**        | *(No parameters)*                 | `200, { "id1": "url1", "id2": "url2" }` |
+| `/` **POST**       | `:url` - URL to shorten           | `201, { "id": "short_id" }` <br> `400, "Invalid URL format"` |
+| `/` **DELETE**     | *(No parameters)*                 | `404, "Invalid operation"` |
+
 
 ## Design & Implementation
 ### **1. Short URL Generation**
