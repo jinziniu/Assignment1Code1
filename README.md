@@ -33,7 +33,7 @@ The server runs on `http://127.0.0.1:8000`.
 ## Design & Implementation
 ### **1. Short URL Generation**
 - Uses **Base62 encoding** (`0-9, a-z, A-Z` = 62 characters) for shorter, readable IDs.
-- Implements a **global counter** to ensure unique ID generation.
+- Implements a **ID** to ensure unique ID generation.
 - Uses **offset `F = 100000`** to avoid extremely short IDs.
 - **Encoding function:**
   ```python
