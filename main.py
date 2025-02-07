@@ -74,8 +74,6 @@ def handle_short_id(short_id):
 
     if request.method == 'GET':
         if mapping:
-            mapping.visit_count +=1
-            db.session.commit()
 
             response = jsonify({'value': mapping.long_url})
             response.status_code =301
