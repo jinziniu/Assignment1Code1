@@ -96,12 +96,12 @@ def get_long_url(short_id):
         mapping = URLMapping.query.filter_by(shortid=short_id).first()
         if not mapping:
             return jsonify({"error": "Not found"}), 404
-        response = redirect(mapping.long_url, code=301)
-        response.autocorrect_location_header = False
-        return response
+        # 返回 JSON 响应，并设置状态码为 301
+        return jsonify({"value": mapping.long_url}), 301
     except Exception as e:
         app.logger.error(f"Error in get_long_url for {short_id}: {e}")
         return jsonify({"error": "Internal Server Error"}), 500
+
 
 # 修改短链接的 PUT 接口
 @app.route('/<short_id>', methods=['PUT'])
